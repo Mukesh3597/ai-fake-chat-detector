@@ -88,3 +88,26 @@ text,label
 "You won a lottery click link",fake
 "Bank KYC expired update now",fake
 "Verify details immediately",fake
+text,label
+"Hey, where are you? I'm waiting.",real
+"Please call me when you are free.",real
+"I love you so much ❤️",real
+"Good morning, have a nice day!",real
+"Can you send the homework photos?",real
+"आज शाम मिलते हैं।",real
+"Thank you for helping me today.",real
+"Let's meet tomorrow at 5 pm.",real
+
+"Your account will be blocked. Verify KYC now.",fake
+"Congratulations! You won 10 lakh. Click link.",fake
+"Send OTP urgently to avoid suspension.",fake
+"Refund approved. Pay fee to receive money.",fake
+"UPI pending. Click to verify payment.",fake
+"Bank alert: account locked, verify immediately.",fake
+"KYC update needed. Login using this link.",fake
+
+"Forward this message to 10 people for good luck.",suspicious
+"Breaking news!!! Share to all groups now.",suspicious
+"Urgent!! Send this to everyone you know.",suspicious
+"Dont ignore, forward to 5 friends.",suspicious
+"Viral message, share quickly.",suspicious
