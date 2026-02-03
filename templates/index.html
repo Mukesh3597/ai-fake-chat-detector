@@ -1,56 +1,154 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
   <meta charset="UTF-8" />
-  <title>AI Fake WhatsApp Chat Detector</title>
+  <title>Fake / Real Message Checker</title>
+
   <style>
-    body { font-family: Arial; background: #f4f6f8; padding: 40px; }
-    .box { max-width: 760px; margin:auto; background:#fff; padding:22px; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
-    textarea { width:100%; height:130px; padding:10px; font-size:14px; border-radius:10px; border:1px solid #ccc; }
-    button { padding:12px; width:100%; margin-top:12px; border:none; border-radius:10px; font-size:16px; cursor:pointer; background:#111; color:#fff; }
-    .small { color:#444; font-size:13px; margin-top:8px; line-height:1.45; }
-    .result { margin-top:18px; padding:14px; border-radius:12px; background:#f7f7f7; border:1px solid #e7e7e7; }
-    .tag { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; margin-right:8px; font-size:14px; }
-    .scores { margin-top:10px; padding:10px; border-radius:12px; background:#fff; border:1px dashed #d7d7d7; font-size:13px; }
-    .row { margin-top:8px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 40px;
+    }
+    .box {
+      max-width: 760px;
+      margin: auto;
+      background: white;
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+    textarea {
+      width: 100%;
+      height: 140px;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+    button.main {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .small {
+      font-size: 13px;
+      color: #444;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* 🔥 Trending box (fixed height + scroll) */
+    .trend {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e7e7e7;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .trend-item {
+      background: #f7f7f7;
+      padding: 8px;
+      border-radius: 10px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .result {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f7f7f7;
+      border: 1px solid #e7e7e7;
+    }
+    .tag {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: bold;
+      margin-right: 6px;
+      font-size: 14px;
+    }
+
+    /* 🟢🟡🟠 Progress bars */
+    .scores {
+      margin-top: 12px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px dashed #d7d7d7;
+      font-size: 13px;
+    }
+    .row { margin-top: 8px; }
     .lbl { display:flex; justify-content:space-between; font-size:12px; }
     .bar { height:10px; background:#e9edf3; border-radius:999px; overflow:hidden; }
     .fill { height:100%; }
-    .card { margin-top:14px; padding:12px; border-radius:12px; background:#fff; border:1px solid #e7e7e7; }
-    .trend { margin-top:16px; padding:12px; border-radius:12px; background:#fff; border:1px solid #e7e7e7; }
-    .trend-item { padding:8px; border-radius:10px; background:#f7f7f7; margin-top:8px; }
-    .sharebtn { background:#0b5; }
+
+    /* ⬇️⬆️ Floating scroll buttons */
+    .fab {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .fab button {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
   </style>
 </head>
+
 <body>
 
 <div class="box">
   <h2>🤖 Fake / Real Message Checker</h2>
   <p class="small">
-    Paste message → Check → Result + Confidence + Explanation.  
-    ⚠️ Awareness tool (100% guarantee नहीं)।
+    Paste message → Check → Result + Confidence + Explanation  
+    ⚠️ Awareness tool (100% guarantee नहीं)
   </p>
 
-  <!-- Trending -->
-  <div class="trend">
+  <!-- 🔥 Trending Messages -->
+  <div class="trend" id="trendingBox">
     <b>🔥 आज Trending Messages</b>
-    <div class="small">लोग आज सबसे ज्यादा यही messages check कर रहे हैं:</div>
+    <div class="small">लोग आज सबसे ज़्यादा यही messages check कर रहे हैं:</div>
+
     {% for t in trending %}
       <div class="trend-item">
-        <div class="small"><b>({{ t.count }})</b> {{ t.sample }}</div>
+        <b>({{ t.count }})</b> {{ t.sample }}
       </div>
     {% endfor %}
   </div>
 
+  <!-- Input -->
   <form method="POST">
-    <textarea name="chat" placeholder="Paste WhatsApp message here...">{{ chat }}</textarea>
-    <button type="submit">✅ Check Message</button>
+    <textarea id="chatBox" name="chat" placeholder="Paste WhatsApp message here...">{{ chat }}</textarea>
+    <button class="main" type="submit">✅ Check Message</button>
   </form>
 
+  <!-- Result -->
   {% if result %}
   <div class="result">
     <div>
-      <strong>Result:</strong>
+      <b>Result:</b>
 
       {% if "REAL" in result %}
         <span class="tag" style="background:#e8fff0;">😇 REAL</span>
@@ -73,36 +171,12 @@
       {% endif %}
     </div>
 
-    <div class="small" style="margin-top:10px;">
-      <b>This message is:</b>
-      {% if "REAL" in result %}<b>REAL</b>{% elif "FAKE" in result %}<b>FAKE</b>{% else %}<b>SUSPICIOUS</b>{% endif %}
-    </div>
-
     {% if explain %}
-      <div class="small" style="margin-top:6px;"><b>Explanation:</b> {{ explain }}</div>
-    {% endif %}
-
-    <!-- Highlighted message -->
-    {% if highlighted_html %}
-      <div class="card">
-        <b>Highlighted Message</b>
-        <div class="small" style="margin-top:8px;">{{ highlighted_html | safe }}</div>
+      <div class="small" style="margin-top:8px;">
+        <b>Explanation:</b> {{ explain }}
       </div>
     {% endif %}
 
-    <!-- Links -->
-    {% if urls and urls|length > 0 %}
-      <div class="card">
-        <b>Detected Source/Links</b>
-        <div class="small" style="margin-top:8px;">
-          {% for u in urls %}
-            • {{ u }}<br>
-          {% endfor %}
-        </div>
-      </div>
-    {% endif %}
-
-    <!-- All scores -->
     {% if prob_map and prob_map|length > 0 %}
     <div class="scores">
       <b>Confidence (All Scores)</b>
@@ -121,20 +195,16 @@
         <div class="lbl"><span>SUSPICIOUS</span><span>{{ prob_map.get("suspicious",0) }}%</span></div>
         <div class="bar"><div class="fill" style="width:{{ prob_map.get('suspicious',0) }}%;background:#f4b400;"></div></div>
       </div>
-
-      <!-- Share Card -->
-      <form method="POST" action="/card" target="_blank" style="margin-top:12px;">
-        <input type="hidden" name="result" value="{{ result }}">
-        <input type="hidden" name="confidence" value="{{ confidence }}">
-        <input type="hidden" name="real_p" value="{{ prob_map.get('real',0) }}">
-        <input type="hidden" name="fake_p" value="{{ prob_map.get('fake',0) }}">
-        <input type="hidden" name="sus_p" value="{{ prob_map.get('suspicious',0) }}">
-        <button class="sharebtn" type="submit">📸 Shareable Result Card</button>
-      </form>
     </div>
     {% endif %}
   </div>
   {% endif %}
+</div>
+
+<!-- ⬇️⬆️ Floating Scroll Buttons -->
+<div class="fab">
+  <button title="Go to input" onclick="document.getElementById('chatBox').scrollIntoView({behavior:'smooth'});">⬇️</button>
+  <button title="Go to top" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆️</button>
 </div>
 
 </body>
