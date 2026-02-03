@@ -1,62 +1,110 @@
+# app.py
 from flask import Flask, render_template, request
+from datetime import date
+import sqlite3
+import hashlib
+
 from predict import predict_with_details
 
 app = Flask(__name__)
 
+DB_PATH = "trend.db"
 
-def is_meaningful_short_text(text: str) -> bool:
-    """
-    छोटे लेकिन meaningful messages allow करने के लिए:
-    - कम से कम 3 words हों
-    - और words में कोई meaningful word हो
-    """
-    words = text.lower().split()
-    meaningful_words = {
-        "love", "miss", "sorry", "thanks", "thank", "please",
-        "busy", "call", "meet", "meeting", "tomorrow", "today",
-        "yes", "no", "okay", "ok", "fine", "hello", "hi"
-    }
-    return len(words) >= 3 and any(w in meaningful_words for w in words)
+def init_db():
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS trending (
+      day TEXT,
+      msg_hash TEXT,
+      sample TEXT,
+      count INTEGER,
+      PRIMARY KEY (day, msg_hash)
+    )
+    """)
+    con.commit()
+    con.close()
 
+def add_trending(msg: str):
+    d = date.today().isoformat()
+    h = hashlib.sha1((msg or "").strip().lower().encode("utf-8")).hexdigest()
+    sample = (msg or "").strip().replace("\n", " ")[:120]
+
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT count FROM trending WHERE day=? AND msg_hash=?", (d, h))
+    row = cur.fetchone()
+    if row:
+        cur.execute("UPDATE trending SET count=count+1 WHERE day=? AND msg_hash=?", (d, h))
+    else:
+        cur.execute("INSERT INTO trending(day, msg_hash, sample, count) VALUES(?,?,?,1)", (d, h, sample))
+    con.commit()
+    con.close()
+
+def get_trending(limit=5):
+    d = date.today().isoformat()
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT sample, count FROM trending WHERE day=? ORDER BY count DESC LIMIT ?", (d, limit))
+    rows = cur.fetchall()
+    con.close()
+    return [{"sample": r[0], "count": r[1]} for r in rows]
+
+init_db()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = None
     confidence = None
-    keywords = []
     prob_map = {}
     explain = None
     chat_text = ""
+    highlighted_html = ""
+    urls = []
+    trending = get_trending()
 
     if request.method == "POST":
         chat_text = request.form.get("chat", "").strip()
 
-        words_count = len(chat_text.split())
-        chars_count = len(chat_text)
+        # Trending count always (even short)
+        if chat_text:
+            add_trending(chat_text)
+            trending = get_trending()
 
-        # ✅ Rule:
-        # 1) अगर बहुत छोटा है AND meaningful भी नहीं है -> MORE TEXT NEEDED
-        # 2) अगर meaningful short है (जैसे "I love you") -> prediction चलाओ
-        if (chars_count < 20 or words_count < 4) and (not is_meaningful_short_text(chat_text)):
+        # Meaningful short messages allow
+        words = chat_text.split()
+        if len(chat_text) < 6 and len(words) <= 1:
             result = "📝 MORE TEXT NEEDED"
-            explain = "Please paste a longer chat (min 4–5 words / 20+ chars) for accurate detection."
-            confidence = 10.0  # orange
-            prob_map = {}      # scores hide
-            keywords = []      # keywords hide
+            explain = "कृपया थोड़ा बड़ा मैसेज डालें (कम से कम 3–4 शब्द)।"
+            confidence = 10.0
+            prob_map = {}
+            highlighted_html = ""
+            urls = []
         else:
-            # ✅ NORMAL prediction (including meaningful short texts)
-            result, confidence, keywords, prob_map, explain = predict_with_details(chat_text)
+            (result, confidence, prob_map, explain,
+             highlighted_html, urls, fake_hits, suspicious_hits, real_hits) = predict_with_details(chat_text)
 
     return render_template(
         "index.html",
         result=result,
         confidence=confidence,
-        keywords=keywords,
         prob_map=prob_map,
         explain=explain,
-        chat=chat_text
+        chat=chat_text,
+        highlighted_html=highlighted_html,
+        urls=urls,
+        trending=trending
     )
 
+@app.route("/card", methods=["POST"])
+def card():
+    # Shareable card page (render only)
+    result = request.form.get("result", "")
+    confidence = request.form.get("confidence", "")
+    real_p = request.form.get("real_p", "0")
+    fake_p = request.form.get("fake_p", "0")
+    sus_p = request.form.get("sus_p", "0")
+    return render_template("card.html", result=result, confidence=confidence, real_p=real_p, fake_p=fake_p, sus_p=sus_p)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

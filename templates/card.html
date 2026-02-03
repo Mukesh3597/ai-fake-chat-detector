@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Share Card</title>
+  <style>
+    body{font-family:Arial;background:#f4f6f8;display:flex;justify-content:center;align-items:center;height:100vh;}
+    .c{width:420px;background:#fff;border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.12);}
+    .h{font-size:18px;font-weight:800;}
+    .pill{display:inline-block;padding:6px 12px;border-radius:999px;background:#eef2ff;margin-top:10px;font-weight:700;}
+    .b{margin-top:14px;padding:12px;border-radius:14px;background:#f7f7f7;border:1px solid #e7e7e7;}
+    .line{margin-top:8px;font-size:14px;}
+    .brand{margin-top:14px;color:#666;font-size:12px;}
+  </style>
+</head>
+<body>
+  <div class="c">
+    <div class="h">✅ Message Check Result</div>
+    <div class="pill">{{ result }} | {{ confidence }}%</div>
+
+    <div class="b">
+      <div class="line"><b>REAL:</b> {{ real_p }}%</div>
+      <div class="line"><b>FAKE:</b> {{ fake_p }}%</div>
+      <div class="line"><b>SUSPICIOUS:</b> {{ sus_p }}%</div>
+    </div>
+
+    <div class="brand">Checked by: msgtruth.ai (example)</div>
+    <div class="brand">Tip: Screenshot & Share on WhatsApp/Instagram</div>
+  </div>
+</body>
+</html>
